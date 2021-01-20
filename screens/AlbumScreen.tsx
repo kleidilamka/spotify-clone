@@ -1,10 +1,13 @@
-import React, { useEffect } from "react";
-import { ImageBackground, FlatList } from "react-native";
+import React, { useEffect, useState } from "react";
+import { ImageBackground, FlatList, Text } from "react-native";
+import { API, graphqlOperation } from "aws-amplify";
+
 import { LinearGradient } from "expo-linear-gradient";
 import { useRoute } from "@react-navigation/native";
 import albumDetails from "../data/albumDetails";
 import SongListItem from "../components/SongListItem";
 import AlbumHeader from "../components/AlbumHeader";
+import { getAlbum } from "../graphql/queries";
 
 const image = {
   uri:
@@ -13,10 +16,28 @@ const image = {
 
 const AlbumScreen = () => {
   const route = useRoute();
+  const albumId = route.params.id;
+
+  const [album, setAlbum] = useState(null);
 
   useEffect(() => {
-    console.log(route);
+    const fetchAlbumDetails = async () => {
+      try {
+        const data = await API.graphql(
+          graphqlOperation(getAlbum, { id: albumId })
+        );
+        setAlbum(data.data.getAlbum);
+      } catch (e) {
+        console.log(e);
+      }
+    };
+
+    fetchAlbumDetails();
   }, []);
+
+  if (!album) {
+    return <Text>Loading...</Text>;
+  }
 
   return (
     <LinearGradient
@@ -25,8 +46,8 @@ const AlbumScreen = () => {
       source={image}
     >
       <FlatList
-        data={albumDetails.songs}
-        ListHeaderComponent={() => <AlbumHeader album={albumDetails} />}
+        data={album.songs.items}
+        ListHeaderComponent={() => <AlbumHeader album={album} />}
         renderItem={({ item }) => (
           <SongListItem song={item} keyExtractor={(item) => item.id} />
         )}
